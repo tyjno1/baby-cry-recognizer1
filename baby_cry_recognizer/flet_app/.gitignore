@@ -1,0 +1,10 @@
+build/
+.buildozer/
+*.apk
+*.aab
+__pycache__/
+*.pyc
+.venv/
+venv/
+*.db
+.env
