@@ -1,17 +1,27 @@
 # -*- coding: utf-8 -*-
 """DeepSeek AI Client"""
+import httpx
 from openai import OpenAI
 from config import DEEPSEEK_API_KEY, DEEPSEEK_BASE_URL, DEEPSEEK_MODEL, NEED_CATEGORIES, BEHAVIOR_PATTERNS
 
 class DeepSeekClient:
     """DeepSeek API Client"""
-    
+
     def __init__(self):
-        self.client = OpenAI(
-            api_key=DEEPSEEK_API_KEY,
-            base_url=DEEPSEEK_BASE_URL
-        )
+        self._client = None
         self.model = DEEPSEEK_MODEL
+
+    def _get_client(self):
+        if self._client is None:
+            if not DEEPSEEK_API_KEY:
+                raise RuntimeError("DeepSeek API Key 未配置，请在侧边栏设置")
+            http_client = httpx.Client(timeout=60.0)
+            self._client = OpenAI(
+                api_key=DEEPSEEK_API_KEY,
+                base_url=DEEPSEEK_BASE_URL,
+                http_client=http_client
+            )
+        return self._client
     
     def analyze_cry(self, feature_description: str, behaviors: list = None) -> dict:
         """
@@ -48,7 +58,7 @@ class DeepSeekClient:
         user_content = f"{feature_description}{behavior_text}"
         
         try:
-            response = self.client.chat.completions.create(
+            response = self._get_client().chat.completions.create(
                 model=self.model,
                 messages=[
                     {"role": "system", "content": system_prompt},
