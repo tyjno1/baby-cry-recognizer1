@@ -30,13 +30,11 @@ def main(page: ft.Page):
     page.window.width = 400
     page.window.height = 850
 
-    # Show loading immediately to avoid white screen
     loading_text = ft.Text("正在初始化...", size=14, color=ft.Colors.BLUE_600)
     error_text = ft.Text("", color=ft.Colors.RED, size=13, selectable=True)
     page.add(ft.SafeArea(ft.Column([loading_text, error_text], spacing=8)))
     page.update()
 
-    # Lazy-load modules inside main to catch errors on Android
     try:
         from config import NEED_CATEGORIES, BEHAVIOR_PATTERNS, REFERENCE_GUIDE
         from config import MATCH_THRESHOLD as CFG_MATCH_THRESHOLD
@@ -50,21 +48,20 @@ def main(page: ft.Page):
         page.update()
         return
 
-    # Init DB safely
     try:
         init_db()
+        loading_text.value = "✔ 数据库初始化成功"
+        page.update()
     except Exception:
         loading_text.value = ""
         error_text.value = "✖ 数据库初始化失败:\n" + traceback.format_exc()
         page.update()
         return
 
-    # App state
     selected_behaviors = []
     last_result = None
     last_features = None
 
-    # Helper functions
     def section_header(text):
         return ft.Text(text, size=16, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_700)
 
@@ -77,7 +74,6 @@ def main(page: ft.Page):
             elevation=1
         )
 
-    # Settings
     api_key_field = ft.TextField(
         label="DeepSeek API Key",
         value=os.getenv("DEEPSEEK_API_KEY", ""),
@@ -95,7 +91,6 @@ def main(page: ft.Page):
         color=ft.Colors.GREEN_700 if count > 0 else ft.Colors.GREY_500
     )
 
-    # Behavior checkboxes
     behavior_grid = ft.ResponsiveRow(spacing=4, run_spacing=4)
     for code, name in BEHAVIOR_PATTERNS.items():
         cb = ft.Checkbox(label=name, value=False, dense=True)
@@ -109,7 +104,6 @@ def main(page: ft.Page):
 
     behavior_status = ft.Text("", color=ft.Colors.BLUE_500, size=12)
 
-    # Record button
     record_btn = ft.ElevatedButton(
         "U0001f3a4 开始录音（5秒）", icon=ft.Icons.MIC,
         style=ft.ButtonStyle(bgcolor=ft.Colors.BLUE_600, color=ft.Colors.WHITE, padding=16,
@@ -119,7 +113,6 @@ def main(page: ft.Page):
 
     status_text = ft.Text("", color=ft.Colors.GREY_500)
 
-    # Result section
     result_title = ft.Text("", size=18, weight=ft.FontWeight.BOLD)
     confidence_bar = ft.ProgressBar(width=300, visible=False)
     confidence_label = ft.Text("", color=ft.Colors.GREY_600, size=12)
@@ -182,7 +175,6 @@ def main(page: ft.Page):
         elevation=2, visible=False
     )
 
-    # Reference guide
     guide_tiles = []
     for code, info in REFERENCE_GUIDE.items():
         behaviors_text = "、".join([BEHAVIOR_PATTERNS.get(b, b) for b in info["behaviors"]])
@@ -203,7 +195,6 @@ def main(page: ft.Page):
             )
         )
 
-    # History
     history_column = ft.Column(spacing=4)
 
     def refresh_history():
@@ -221,11 +212,11 @@ def main(page: ft.Page):
                 is_correct = record["predicted_need"] == record["actual_need"]
                 status_icon = "✅" if is_correct else "❌"
                 status_color = ft.Colors.GREEN_700 if is_correct else ft.Colors.RED_600
-                parts = []
+                parts2 = []
                 if record.get("behaviors"):
                     names = [BEHAVIOR_PATTERNS.get(b, b) for b in record["behaviors"]]
-                    parts.append(f"行为: {', '.join(names)}")
-                parts.append(f"时间: {record['created_at']}")
+                    parts2.append(f"行为: {', '.join(names)}")
+                parts2.append(f"时间: {record['created_at']}")
                 history_column.controls.append(
                     ft.Card(
                         content=ft.Container(
@@ -235,14 +226,13 @@ def main(page: ft.Page):
                                     ft.Text(f"实际: {actual}", size=12),
                                     ft.Text(status_icon, size=12, color=status_color),
                                 ], spacing=8, alignment=ft.MainAxisAlignment.SPACE_BETWEEN),
-                                ft.Text(" | ".join(parts), size=10, color=ft.Colors.GREY_600)
+                                ft.Text(" | ".join(parts2), size=10, color=ft.Colors.GREY_600)
                             ], tight=True, spacing=2),
                             padding=8
                         ), elevation=1
                     )
                 )
 
-    # Record button handler
     def on_record(_):
         nonlocal last_result, last_features
         try:
@@ -331,35 +321,43 @@ def main(page: ft.Page):
             behavior_status.value = "已选行为: " + ", ".join(names) if names else ""
         refresh_history()
 
-    # Build page UI (clear loading, show real UI)
-    page.controls.clear()
-    page.add(
-        ft.Column([
-            ft.Text("U0001f476 婴儿哭声意图理解器", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_800),
-            ft.Text("听懂哭声，告别猜测——让每一次回应都准确、及时、安心", size=12, color=ft.Colors.GREY_500),
-            ft.Divider(),
-            section_header("⚙️ 设置"),
-            make_card(api_key_field,
-                ft.Row([ft.Text("匹配阈值", size=12), threshold_slider,
-                       ft.Text(f"{get_setting('match_threshold', str(CFG_MATCH_THRESHOLD))}", size=12)], spacing=8),
-                feedback_count_text),
-            section_header("U0001f440 行为表现（可选）"),
-            make_card(behavior_grid),
-            behavior_status,
-            ft.Divider(),
-            record_btn, status_text,
-            ft.Divider(),
-            result_card,
-            ft.Divider(),
-            section_header("U0001f4d6 资料参考"),
-            ft.Column(guide_tiles, spacing=4),
-            ft.Divider(),
-            section_header("U0001f4dd 反馈历史"),
-            history_column,
-            ft.Container(height=60)
-        ], spacing=8, tight=True)
-    )
-    refresh_history()
+    # Final UI rendering with error catch
+    try:
+        page.controls.clear()
+        page.add(
+            ft.Column([
+                ft.Text("U0001f476 婴儿哭声意图理解器", size=22, weight=ft.FontWeight.BOLD, color=ft.Colors.BLUE_800),
+                ft.Text("听懂哭声，告别猜测——让每一次回应都准确、及时、安心", size=12, color=ft.Colors.GREY_500),
+                ft.Divider(),
+                section_header("⚙️ 设置"),
+                make_card(api_key_field,
+                    ft.Row([ft.Text("匹配阈值", size=12), threshold_slider,
+                           ft.Text(f"{get_setting('match_threshold', str(CFG_MATCH_THRESHOLD))}", size=12)], spacing=8),
+                    feedback_count_text),
+                section_header("U0001f440 行为表现（可选）"),
+                make_card(behavior_grid),
+                behavior_status,
+                ft.Divider(),
+                record_btn, status_text,
+                ft.Divider(),
+                result_card,
+                ft.Divider(),
+                section_header("U0001f4d6 资料参考"),
+                ft.Column(guide_tiles, spacing=4),
+                ft.Divider(),
+                section_header("U0001f4dd 反馈历史"),
+                history_column,
+                ft.Container(height=60)
+            ], spacing=8, tight=True)
+        )
+        refresh_history()
+    except Exception:
+        page.controls.clear()
+        page.add(ft.SafeArea(ft.Column([
+            ft.Text("✖ UI构建失败", size=18, weight=ft.FontWeight.BOLD, color=ft.Colors.RED),
+            ft.Text(traceback.format_exc(), size=11, color=ft.Colors.RED, selectable=True),
+        ])))
+        page.update()
 
 
 if __name__ == "__main__":
