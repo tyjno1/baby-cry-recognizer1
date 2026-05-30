@@ -83,9 +83,5 @@ REFERENCE_GUIDE = {
     }
 }
 
-# DB Path - use app data dir on mobile, fallback to local on desktop
-try:
-    from flet.utils import get_data_dir
-    DB_PATH = os.path.join(get_data_dir(), "feedback.db")
-except ImportError:
-    DB_PATH = "feedback.db"
+# DB Path
+DB_PATH = "feedback.db"

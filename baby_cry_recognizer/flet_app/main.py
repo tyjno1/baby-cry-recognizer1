@@ -11,7 +11,8 @@ import flet as ft
 from config import NEED_CATEGORIES, MATCH_THRESHOLD, BEHAVIOR_PATTERNS, REFERENCE_GUIDE
 from database import init_db, save_feedback, get_all_feedback, get_feedback_count, get_setting, set_setting
 from audio_processor import extract_features, find_best_match, generate_feature_description
-from ai_client import DeepSeekClient
+# Delay import of ai_client to avoid startup crashes on Android
+# from ai_client import DeepSeekClient
 
 # Cross-platform audio recording
 try:
@@ -287,6 +288,7 @@ def main(page: ft.Page):
     # ─── Record button handler ───
 
     def on_record(_):
+        from ai_client import DeepSeekClient
         nonlocal last_result, last_features
 
         api_key = api_key_field.value.strip()

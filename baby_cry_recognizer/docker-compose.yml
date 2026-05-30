@@ -1,0 +1,32 @@
+# 婴儿哭声识别器 - Docker Compose 配置
+version: '3.8'
+
+services:
+  baby-cry-recognizer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: baby-cry-recognizer:latest
+    container_name: baby-cry-recognizer
+    ports:
+      - "8501:8501"
+    environment:
+      # API 配置（请修改为你的实际 API Key）
+      - DEEPSEEK_API_KEY=${DEEPSEEK_API_KEY:-}
+      - DEEPSEEK_BASE_URL=${DEEPSEEK_BASE_URL:-https://api.deepseek.com}
+      - DEEPSEEK_MODEL=${DEEPSEEK_MODEL:-deepseek-v4-pro}
+      # 应用配置
+      - MATCH_THRESHOLD=${MATCH_THRESHOLD:-0.85}
+      - MAX_HISTORY=${MAX_HISTORY:-1000}
+    volumes:
+      # 持久化数据存储
+      - ./data:/app/data
+      # 可选：挂载 .env 文件
+      - ./.env:/app/.env:ro
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8501/_stcore/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s

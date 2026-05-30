@@ -45,7 +45,7 @@ jobs:
         working-directory: baby_cry_recognizer/flet_app
         run: |
           flutter config --android-sdk $ANDROID_HOME
-          flet build apk --verbose --yes
+          flet build apk --verbose --yes --permissions microphone
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
